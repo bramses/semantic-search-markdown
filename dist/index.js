@@ -31,13 +31,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.main = void 0;
 const openai_1 = require("openai");
 const dotenv = __importStar(require("dotenv"));
+const fs_1 = __importDefault(require("fs"));
 var similarity = require('compute-cosine-similarity');
+const path_1 = require("path");
 dotenv.config();
 const configuration = new openai_1.Configuration({
-    organization: "org-bJPmrqy1qS5FFLdv07E5b1dF",
+    organization: process.env.OPENAI_ORG,
     apiKey: process.env.OPENAI_API_KEY,
 });
 const files = [
@@ -61,11 +67,36 @@ const files = [
         name: "Elgato Stream Deck.txt",
         text: "Elgato Stream Deck is a hardware device.",
     },
+    {
+        name: "Golang.txt",
+        text: "Go is very fast and easy to learn.",
+    }, // every filename adds ~100kb to the bundle size
 ];
-const main = () => __awaiter(void 0, void 0, void 0, function* () {
+// read a json file and return the data
+const readFile = (file) => __awaiter(void 0, void 0, void 0, function* () {
+    return new Promise((resolve, reject) => {
+        fs_1.default.readFile(file, "utf8", (err, data) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(data);
+        });
+    });
+});
+const writeFile = (file, data) => __awaiter(void 0, void 0, void 0, function* () {
+    const filePath = (0, path_1.join)(__dirname, '..', 'json', file);
+    return new Promise((resolve, reject) => {
+        fs_1.default.writeFile(filePath, data, (err) => {
+            if (err) {
+                reject(err);
+            }
+            resolve();
+        });
+    });
+});
+const main = (query) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const openai = new openai_1.OpenAIApi(configuration);
-    const query = "twitch.tv";
     const queryResponse = yield openai.createEmbedding({
         model: "text-similarity-babbage-001",
         input: query,
@@ -82,16 +113,17 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             model: "text-similarity-babbage-001",
             input: file.name,
         });
-        console.log(response.data);
         // @ts-ignore
         const embedding = (_a = response.data) === null || _a === void 0 ? void 0 : _a.data[0].embedding;
         const similarityScore = similarity(embedding, queryEmbedding);
         scores.push(similarityScore);
-        fileEmbeddings.push(response.data);
+        fileEmbeddings.push(Object.assign({ data: response.data }, file));
     }
+    writeFile("fileEmbeddings.json", JSON.stringify(fileEmbeddings, null, 2));
     const maxScore = Math.max(...scores);
     const maxScoreIndex = scores.indexOf(maxScore);
     console.log(`The most similar file is ${files[maxScoreIndex].name} with a score of ${maxScore}`);
     //   console.log(fileEmbeddings)
 });
-main();
+exports.main = main;
+(0, exports.main)("twitch.tv");
