@@ -1,7 +1,7 @@
 import { Configuration, OpenAIApi } from "openai";
 import * as dotenv from "dotenv";
 var similarity = require("compute-cosine-similarity");
-import { addPoints, collectionExists, searchPoints } from "./qdrant-factory";
+import { addPoints, collectionExists, searchPoints, scrollPoints } from "./qdrant-factory";
 import { writeFile } from "./writeFile";
 import { zip } from "lodash";
 
@@ -71,27 +71,6 @@ const createEmbeddings = async (openai: OpenAIApi, query: string[], model = "tex
   }
 }
 
-
-export const main = async (query: string) => {
-
-  // const scores:number[] = [];
-
-
-  // const queryEmbedding = await embedQuery(openai, query);
-  // const fileEmbeddings = await createFilenameEmbeddings(openai, queryEmbedding, scores);
-
-  // writeFile("fileEmbeddings.json", JSON.stringify(fileEmbeddings, null, 2));
-
-  // const maxScore = Math.max(...scores);
-  // const maxScoreIndex = scores.indexOf(maxScore);
-  // console.log(
-  //   `The most similar file is ${files[maxScoreIndex].name} with a score of ${maxScore}`
-  // );
-};
-
-
-
-
 const collectionName = "test";
 
 const writeToQDrantCollection = async (filenames: string[]) => {
@@ -125,34 +104,33 @@ const writeToQDrantCollection = async (filenames: string[]) => {
   }
 };
 
-
-
-
-// writeToQDrantCollection(files.map((f) => f.name));
-
-/**embedding for each file and compare score in real time
- * @param openai 
- * @param queryEmbedding 
- * @param scores 
- * @returns 
- */
-async function createFilenameEmbeddings(openai: OpenAIApi, queryEmbedding: number[] | undefined, scores: any[]) {
-  const fileEmbeddings = [];
-  for (const file of files) {
-    const response = await openai.createEmbedding({
-      model: "text-similarity-babbage-001",
-      input: file.name,
-    });
-
-    // @ts-ignore
-    const embedding = response.data?.data[0].embedding;
-    const similarityScore = similarity(embedding, queryEmbedding);
-    scores.push(similarityScore);
-    fileEmbeddings.push({
-      data: response.data,
-      ...file,
-    });
+const searchQDrantCollection = async (query: string) => {
+  console.log("Searching QDrant collection");
+  if (!await collectionExists(collectionName)) {
+    throw new Error("Collection does not exist");
   }
-  return { fileEmbeddings, scores };
+
+  const queryEmbedding = await createEmbeddings(openai, [query]);
+  const queryVector = queryEmbedding?.[0].embedding;
+  
+  if (queryVector) {
+    const res = await searchPoints(collectionName, queryVector, 2);
+    console.log(res);
+    console.log(res.result[0].payload.filename);
+  }
+};
+
+const findQDrantIDByFilename = async (filename: string) => {
+  console.log("Searching QDrant collection");
+  if (!await collectionExists(collectionName)) {
+    throw new Error("Collection does not exist");
+  }
+
+  const res = await scrollPoints(collectionName, filename);
+  console.log(res.result.points);
 }
-// main("twitch.tv");
+
+findQDrantIDByFilename("Chocalate Milkshake.txt");
+
+// searchQDrantCollection("programming language");
+// writeToQDrantCollection(files.map((f) => f.name));

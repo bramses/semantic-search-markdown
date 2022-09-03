@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.searchPoints = exports.addPoints = exports.collectionExists = exports.createCollection = void 0;
+exports.scrollPoints = exports.searchPoints = exports.addPoints = exports.collectionExists = exports.createCollection = void 0;
 const axios_1 = __importDefault(require("axios"));
 // create collection
 /*
@@ -28,7 +28,7 @@ function createCollection(collectionName, vectorSize, distance) {
         const url = `http://localhost:6333/collections/${collectionName}`;
         const data = {
             vector_size: vectorSize,
-            distance: distance
+            distance: distance,
         };
         const response = yield axios_1.default.put(url, data);
         return response.data;
@@ -45,8 +45,8 @@ function collectionExists(collectionName) {
             const url = `http://localhost:6333/collections/${collectionName}`;
             const response = yield axios_1.default.get(url, {
                 headers: {
-                    'Content-Type': 'application/json'
-                }
+                    "Content-Type": "application/json",
+                },
             });
             return true;
         }
@@ -77,7 +77,7 @@ function addPoints(collectionName, points) {
     return __awaiter(this, void 0, void 0, function* () {
         const url = `http://localhost:6333/collections/${collectionName}/points?wait=true`;
         const data = {
-            points: points
+            points: points,
         };
         const response = yield axios_1.default.put(url, data);
         return response.data;
@@ -109,6 +109,8 @@ function searchPoints(collectionName, vector, top, filter) {
         const data = {
             vector: vector,
             top: top,
+            with_vector: true,
+            with_payload: true,
         };
         if (filter) {
             data["filter"] = filter;
@@ -118,3 +120,34 @@ function searchPoints(collectionName, vector, top, filter) {
     });
 }
 exports.searchPoints = searchPoints;
+// scroll collection for filename
+/*
+POST /collections/{collection_name}/points/scroll
+
+{
+    "filter": {
+        "must": [
+            { "key": "city", "match": { "value": "London" } },
+            { "key": "color", "match": { "value": "red" } }
+        ]
+    }
+  ...
+}
+*/
+function scrollPoints(collectionName, filename) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const url = `http://localhost:6333/collections/${collectionName}/points/scroll`;
+        const data = {
+            with_vector: true,
+            with_payload: true,
+            filter: {
+                must: [
+                    { "key": "filename", "match": { "value": filename } },
+                ]
+            }
+        };
+        const response = yield axios_1.default.post(url, data);
+        return response.data;
+    });
+}
+exports.scrollPoints = scrollPoints;

@@ -32,7 +32,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.main = void 0;
 const openai_1 = require("openai");
 const dotenv = __importStar(require("dotenv"));
 var similarity = require("compute-cosine-similarity");
@@ -98,18 +97,6 @@ const createEmbeddings = (openai, query, model = "text-similarity-babbage-001") 
         }
     }
 });
-const main = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    // const scores:number[] = [];
-    // const queryEmbedding = await embedQuery(openai, query);
-    // const fileEmbeddings = await createFilenameEmbeddings(openai, queryEmbedding, scores);
-    // writeFile("fileEmbeddings.json", JSON.stringify(fileEmbeddings, null, 2));
-    // const maxScore = Math.max(...scores);
-    // const maxScoreIndex = scores.indexOf(maxScore);
-    // console.log(
-    //   `The most similar file is ${files[maxScoreIndex].name} with a score of ${maxScore}`
-    // );
-});
-exports.main = main;
 const collectionName = "test";
 const writeToQDrantCollection = (filenames) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("Writing to QDrant collection");
@@ -138,29 +125,27 @@ const writeToQDrantCollection = (filenames) => __awaiter(void 0, void 0, void 0,
         console.log(res);
     }
 });
+const searchQDrantCollection = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("Searching QDrant collection");
+    if (!(yield (0, qdrant_factory_1.collectionExists)(collectionName))) {
+        throw new Error("Collection does not exist");
+    }
+    const queryEmbedding = yield createEmbeddings(openai, [query]);
+    const queryVector = queryEmbedding === null || queryEmbedding === void 0 ? void 0 : queryEmbedding[0].embedding;
+    if (queryVector) {
+        const res = yield (0, qdrant_factory_1.searchPoints)(collectionName, queryVector, 2);
+        console.log(res);
+        console.log(res.result[0].payload.filename);
+    }
+});
+const findQDrantIDByFilename = (filename) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("Searching QDrant collection");
+    if (!(yield (0, qdrant_factory_1.collectionExists)(collectionName))) {
+        throw new Error("Collection does not exist");
+    }
+    const res = yield (0, qdrant_factory_1.scrollPoints)(collectionName, filename);
+    console.log(res.result.points);
+});
+findQDrantIDByFilename("Chocalate Milkshake.txt");
+// searchQDrantCollection("programming language");
 // writeToQDrantCollection(files.map((f) => f.name));
-/**embedding for each file and compare score in real time
- * @param openai
- * @param queryEmbedding
- * @param scores
- * @returns
- */
-function createFilenameEmbeddings(openai, queryEmbedding, scores) {
-    var _a;
-    return __awaiter(this, void 0, void 0, function* () {
-        const fileEmbeddings = [];
-        for (const file of files) {
-            const response = yield openai.createEmbedding({
-                model: "text-similarity-babbage-001",
-                input: file.name,
-            });
-            // @ts-ignore
-            const embedding = (_a = response.data) === null || _a === void 0 ? void 0 : _a.data[0].embedding;
-            const similarityScore = similarity(embedding, queryEmbedding);
-            scores.push(similarityScore);
-            fileEmbeddings.push(Object.assign({ data: response.data }, file));
-        }
-        return { fileEmbeddings, scores };
-    });
-}
-// main("twitch.tv");
