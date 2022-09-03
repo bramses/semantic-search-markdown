@@ -7,7 +7,8 @@
     "dev": "concurrently \"tsc  -w\" \"nodemon ./dist/index.js\"",
     "server": "concurrently \"tsc  -w\" \"nodemon ./dist/server.js\"",
     "build": "tsc",
-    "init": "tsc --init"
+    "init": "tsc --init",
+    "watch-server": "nodemon --watch 'src/**/*' -e ts,tsx --exec 'tsc' ./src/index.ts"
   },
   "keywords": [],
   "author": "",
